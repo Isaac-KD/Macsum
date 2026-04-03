@@ -1,6 +1,6 @@
 import numpy as np
 from Macsum import Macsum, IMSELoss, SPILoss
-from Macsum.losses import PinballLoss
+from losses import PinballLoss
 
 
 # 1. Dummy data preparation
