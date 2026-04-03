@@ -1,92 +1,178 @@
+# Macsum — Interval Aggregation Learning
 
-# Macsum Aggregation Learning
+> A PyTorch implementation of the **Macsum operator** for interval-valued prediction via the asymmetric Choquet integral.
 
-This repository provides a Python implementation of the **Macsum operator**, a new interval-valued linear operator for multi-input/single-output (MISO) system identification. The model is designed to represent system incoherence and imprecision by replacing a single linear function with a convex set of linear functions.
+Based on the research paper: **"Macsum aggregation learning"** — Y. Hmidy, A. Rico, O. Strauss (*Fuzzy Sets and Systems, 2023*).
 
-This work is based on the research paper:  
-**"Macsum aggregation learning"** by Yassine Hmidy, Agnès Rico, and Olivier Strauss (*Fuzzy Sets and Systems, 2023*).
+---
 
-## Overview
+## What is Macsum?
 
-The Macsum model aims to handle systems where the shift invariance property is not fulfilled, meaning the same input can lead to different outputs due to hidden variables or sensor fluctuations. 
+Classical regression models output a single point estimate. Macsum instead outputs an **interval** $[\underline{y},\, \overline{y}]$, representing the full range of plausible outputs for a given input — without requiring probabilistic assumptions.
 
-The aggregation function yields an interval-valued output $[y_{low}, y_{up}]$, representing the lack of accuracy in predicting the system output. Key characteristics include:
-* **Single Parametric Vector**: The model is ruled by a single precise kernel $\varphi$, despite the imprecise output.
-* **Choquet Integral**: The aggregation is based on the asymmetric discrete Choquet integral with respect to the Macsum operator.
-* **Linearity**: The model acts as an interval-valued linear aggregation, preserving homogeneity and a constant gain.
+This is particularly useful when a system's shift-invariance property is violated: the same input can produce different outputs due to hidden variables, measurement noise, or sensor fluctuations. Rather than collapsing this ambiguity into a single value, Macsum makes it explicit.
 
-## Key Features
+The model is governed by a **single learnable kernel** $\varphi \in \mathbb{R}^N$, and the interval bounds are computed via:
 
-* **Differentiable Implementation**: Optimized using PyTorch's Autograd for efficient gradient descent.
-* **Flexible Loss Functions**: Includes implementations for IMSE (Interval Mean Squared Error), Pinball Loss, and SPILoss (Smooth Penalization Interval Loss).
-* **Performance Metrics**: Built-in tracking for PICP (Prediction Interval Coverage Probability) and MPIW (Mean Prediction Interval Width).
+$$\underline{y} = \mathbb{C}_{\nu_\varphi^c}(x) \qquad \overline{y} = \mathbb{C}_{\nu_\varphi}(x)$$
 
-## Project Structure
+where $\mathbb{C}$ denotes the asymmetric discrete Choquet integral, $\nu_\varphi$ is the (concave) Macsum set function, and $\nu_\varphi^c$ is its complementary (convex) function. By construction, the interval captures the output set of a convex family of linear functions that share the same gain.
 
-* `model.py`: Contains the `MacsumCore` PyTorch module implementing the Choquet integral logic.
-* `macsum.py`: The high-level API wrapper for training and prediction.
-* `losses.py`: Definitions for various interval-based cost functions.
-* `test_simple.py`: A professional integration script to validate the installation and data flow.
+---
 
 ## Installation
 
-Ensure you have a Python 3.9+ environment with the following dependencies:
+Requires Python 3.9+ and PyTorch.
 
 ```bash
-pip install torch numpy tqdm matplotlib
+pip install torch numpy tqdm
 ```
 
-## Usage
+Clone and import directly:
 
-### Basic Training with IMSE
+```python
+from Macsum import Macsum, IMSELoss, SPILoss
+```
+
+---
+
+## Quickstart
+
+### Training with IMSE
 
 ```python
 import numpy as np
 from Macsum import Macsum, IMSELoss
 
-# 1. Prepare Data (NumPy arrays)
 X_train = np.random.rand(500, 10)
 y_train = np.sum(X_train, axis=1) + np.random.normal(0, 0.1, 500)
 
-# 2. Initialize Model
 model = Macsum()
-
-# 3. Train using Interval Mean Squared Error
 model.train(X_train, y_train, loss_fn=IMSELoss, epochs=100)
 
-# 4. Predict
 preds = model.predict(X_train[:5])
-print(f"Prediction Center: {preds.center}")
+print(f"Lower  : {preds.lower}")
+print(f"Center : {preds.center}")
+print(f"Upper  : {preds.upper}")
+print(f"Width  : {preds.mpiw}")
 ```
 
-### Advanced Calibration (SPILoss)
+### Validation monitoring
 
-Use the Smooth Penalization Interval Loss to target a specific coverage rate (e.g., 90%):
+```python
+model = Macsum()
+model.train(
+    X_train, y_train,
+    X_val=X_val, y_val=y_val,
+    loss_fn=SPILoss,
+    epochs=100
+)
+
+h = model.history()
+# h contains: train_loss, val_loss, train_picp, val_picp, train_mpiw, val_mpiw, lr
+```
+
+### Custom loss configuration
 
 ```python
 from Macsum import SPILoss
+from losses import PinballLoss
 
-# Configure loss with beta=0.1 for 90% target coverage
-target_loss = lambda yt, yl, yu: SPILoss(yt, yl, yu, beta=0.1)
-model.train(X_train, y_train, loss_fn=target_loss, epochs=150)
+# SPILoss targeting 90% coverage (beta = 0.1)
+custom_loss = lambda yt, yl, yu: SPILoss(yt, yl, yu, beta=0.1, k_sigmoid=30)
+model.train(X_train, y_train, loss_fn=custom_loss, epochs=150)
+
+# Or Pinball Loss with a specific quantile
+model.train(X_train, y_train, loss_fn=PinballLoss, epochs=50)
 ```
 
-## Metrics and Monitoring
+---
 
-The `model.history()` method returns a dictionary containing:
-* `train_loss` / `val_loss`: Evolution of the objective function.
-* `train_picp`: Proportion of ground truth values captured within the predicted intervals.
-* `train_mpiw`: Average width of the predicted intervals.
+## API Reference
 
-## Mathematical Context
+### `Macsum`
 
-The Macsum operator $\nu_\varphi$ is a concave set function, and its complementary $\nu_\varphi^c$ is convex. The output interval is defined by:
-* Lower bound: $\underline{y} = \mathbb{C}_{\nu_\varphi^c}(x)$
-* Upper bound: $\overline{y} = \mathbb{C}_{\nu_\varphi}(x)$
+The main high-level interface.
 
-By construction, the model ensures that the interval represents the set of all outputs obtained by a convex set of linear functions sharing the same gain.
+```python
+model = Macsum()
+```
+
+#### `model.train(...)`
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `X` | `np.ndarray` | — | Input features, shape `(n_samples, n_features)` |
+| `y` | `np.ndarray` | — | Target values, shape `(n_samples,)` |
+| `loss_fn` | `Callable` | — | Loss function `(y_true, y_low, y_up) → scalar` |
+| `X_val` | `np.ndarray` | `None` | Optional validation inputs |
+| `y_val` | `np.ndarray` | `None` | Optional validation targets |
+| `epochs` | `int` | `100` | Number of training epochs |
+| `lr` | `float` | `0.001` | Learning rate |
+| `batch_size` | `int` | `32` | Mini-batch size |
+| `optimizer_cls` | `Optimizer` | `Adam` | PyTorch optimizer class |
+
+#### `model.predict(X) → Prediction`
+
+Returns a `Prediction` object with attributes:
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `.lower` | `np.ndarray` | Lower bound $\underline{y}$ |
+| `.upper` | `np.ndarray` | Upper bound $\overline{y}$ |
+| `.center` | `np.ndarray` | Midpoint `(lower + upper) / 2` |
+| `.mpiw` | `np.ndarray` | Width `upper - lower` |
+
+#### `model.history() → dict`
+
+Returns training metrics logged across epochs:
+
+| Key | Description |
+|-----|-------------|
+| `train_loss` / `val_loss` | Objective function value |
+| `train_picp` / `val_picp` | Coverage probability (fraction of targets inside the interval) |
+| `train_mpiw` / `val_mpiw` | Mean interval width |
+| `lr` | Learning rate at each epoch |
+
+---
+
+## Loss Functions
+
+All loss functions have the signature `(y_true, y_low, y_up) → torch.Tensor`.
+
+### `IMSELoss` — Interval Mean Squared Error
+
+Minimizes the sum of squared distances from $y$ to both bounds. Use this as a general-purpose baseline.
+
+$$\mathcal{L} = \mathbb{E}\left[(y - \underline{y})^2 + (y - \overline{y})^2\right]$$
+
+### `PinballLoss(beta=0.05)`
+
+Quantile regression loss targeting symmetric coverage at level $1 - \beta$. `beta=0.05` targets a 95% prediction interval.
+
+### `SPILoss(beta=0.05, k_sigmoid=50.0)`
+
+Smooth Penalization Interval Loss — a differentiable variant of the Winkler score. Jointly minimizes interval width (MPIW) while penalizing coverage violations:
+
+$$\mathcal{L} = \mathbb{E}[\overline{y} - \underline{y}] + \frac{2}{\beta}\left(\text{pen}_{\underline{y}} + \text{pen}_{\overline{y}}\right)$$
+
+The `k_sigmoid` parameter controls penalty sharpness. Higher values approach a hard step function.
+
+---
+
+## Project Structure
+
+```
+.
+├── model.py      # MacsumCore — PyTorch nn.Module (Choquet integral)
+├── macsum.py     # Macsum — high-level training/inference API
+├── losses.py     # IMSELoss, PinballLoss, SPILoss
+├── __init__.py   # Public exports
+└── test.py       # Integration tests and sanity checks
+```
+
+---
 
 ## References
 
-[1] Y. Hmidy, A. Rico, and O. Strauss. "Macsum aggregation learning." *Fuzzy Sets and Systems*, 2023.
-```
+Hmidy, Y., Rico, A., & Strauss, O. (2023). **Macsum aggregation learning**. *Fuzzy Sets and Systems*. https://doi.org/10.1016/j.fss.2023.XXXXX
