@@ -152,7 +152,7 @@ Quantile regression loss targeting symmetric coverage at level $1 - \beta$. `bet
 
 ### `SPILoss(beta=0.05, k_sigmoid=50.0)`
 
-Smooth Penalization Interval Loss — a differentiable variant of the Winkler score. Jointly minimizes interval width (MPIW) while penalizing coverage violations:
+Smooth Penalization Interval Loss. Jointly minimizes interval width (MPIW) while penalizing coverage violations:
 
 $$\mathcal{L} = \mathbb{E}[\overline{y} - \underline{y}] + \frac{2}{\beta}\left(\text{pen}_{\underline{y}} + \text{pen}_{\overline{y}}\right)$$
 
