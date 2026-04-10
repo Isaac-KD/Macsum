@@ -164,7 +164,7 @@ The `k_sigmoid` parameter controls penalty sharpness. Higher values approach a h
 
 ```
 .
-├── model.py      # MacsumCore — PyTorch nn.Module (Choquet integral)
+├── model.py      # MacsumCore — PyTorch nn.Module 
 ├── macsum.py     # Macsum — high-level training/inference API
 ├── losses.py     # IMSELoss, PinballLoss, SPILoss
 ├── __init__.py   # Public exports
@@ -175,4 +175,4 @@ The `k_sigmoid` parameter controls penalty sharpness. Higher values approach a h
 
 ## References
 
-Hmidy, Y., Rico, A., & Strauss, O. (2023). **Macsum aggregation learning**. *Fuzzy Sets and Systems*. https://doi.org/10.1016/j.fss.2023.XXXXX
+Hmidy, Y., Rico, A., & Strauss, O. (2023). **Macsum aggregation learning**. *Fuzzy Sets and Systems*. 
