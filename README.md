@@ -154,7 +154,7 @@ Quantile regression loss targeting symmetric coverage at level $1 - \beta$. `bet
 
 Smooth Penalization Interval Loss. Jointly minimizes interval width (MPIW) while penalizing coverage violations:
 
-$$\mathcal{L} = \mathbb{E}[\overline{y} - \underline{y}] + \frac{2}{\beta}\left(\text{pen}_{\underline{y}} + \text{pen}_{\overline{y}}\right)$$
+$$\mathcal{L} =[\overline{y} - \underline{y}] + \frac{2}{\beta}\left(\text{pen}_{\underline{y}} + \text{pen}_{\overline{y}}\right)$$
 
 The `k_sigmoid` parameter controls penalty sharpness. Higher values approach a hard step function.
 
