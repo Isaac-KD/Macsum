@@ -144,7 +144,7 @@ All loss functions have the signature `(y_true, y_low, y_up) → torch.Tensor`.
 
 Minimizes the sum of squared distances from $y$ to both bounds. Use this as a general-purpose baseline.
 
-$$\mathcal{L} = \mathbb{E}\left[(y - \underline{y})^2 + (y - \overline{y})^2\right]$$
+$$\mathcal{L} = \left[(y - \underline{y})^2 + (y - \overline{y})^2\right]$$
 
 ### `PinballLoss(beta=0.05)`
 
